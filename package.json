@@ -96,11 +96,15 @@
     }
   },
   "dependencies": {
+    "@serialport/bindings-cpp": "^12.0.1",
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^6.1.4",
     "is-elevated": "^3.0.0",
+    "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "react": "^18.2.0",
@@ -108,6 +112,7 @@
     "react-router-dom": "^6.16.0",
     "rxjs": "^6.5.2",
     "serialport": "^11.0.0",
+    "stream-browserify": "^3.0.0",
     "tableify": "^1.1.1",
     "util": "^0.12.5"
   },

@@ -40,6 +40,11 @@ const configuration: webpack.Configuration = {
     fallback: {
       fs: false,
       path: require.resolve('path-browserify'),
+      stream: require.resolve('stream-browserify'),
+      assert: require.resolve('assert/'),
+      os: require.resolve('os-browserify/browser'),
+      util: require.resolve('util/'),
+      child_process: false, // Set to false if you don't want to polyfill this module
     },
   },
 
@@ -47,7 +52,19 @@ const configuration: webpack.Configuration = {
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'production',
     }),
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    }),
+    new webpack.DefinePlugin({
+      __dirname: JSON.stringify(__dirname),
+    }),
   ],
+
+  node: {
+    __dirname: false,
+    __filename: false,
+  },
 };
 
 export default configuration;
