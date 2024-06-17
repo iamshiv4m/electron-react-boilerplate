@@ -1,10 +1,12 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
-import { SerialPort } from 'serialport';
 
 function Hello() {
-  console.log(SerialPort);
+  const openSerialPort = async () => {
+    const result = await window.electron.ipcRenderer.invoke('open-serial-port', '/dev/tty-usbserial1');
+    console.log(result.message);
+  };
 
   return (
     <div>
@@ -37,6 +39,9 @@ function Hello() {
             Donate
           </button>
         </a>
+        <button type="button" onClick={openSerialPort}>
+          Open Serial Port
+        </button>
       </div>
     </div>
   );
