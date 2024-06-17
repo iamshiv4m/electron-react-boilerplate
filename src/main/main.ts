@@ -5,6 +5,7 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { SerialPort } from 'serialport'; // Import SerialPort
+import { init } from '../Clicker-SDK';
 
 class AppUpdater {
   constructor() {
@@ -25,9 +26,8 @@ ipcMain.on('ipc-example', async (event, arg) => {
 // Handle serial port requests
 ipcMain.handle('open-serial-port', async (event, portPath) => {
   try {
-    const port = new SerialPort({ path: portPath, baudRate: 9600 });
-    // Perform operations on the serial port and return a success message
-    return { success: true, message: 'Port opened successfully' };
+    const list = await SerialPort.list(); // Getting the list of available serial ports
+    return list;
   } catch (error) {
     return { success: false, message: error };
   }
@@ -53,7 +53,7 @@ const installExtensions = async () => {
   return installer
     .default(
       extensions.map((name) => installer[name]),
-      forceDownload
+      forceDownload,
     )
     .catch(console.log);
 };
@@ -81,7 +81,7 @@ const createWindow = async () => {
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
       contextIsolation: true, // Ensure context isolation is disabled to use ipcRenderer
-      nodeIntegration: true,  // Enable node integration
+      nodeIntegration: true, // Enable node integration
     },
   });
 
@@ -139,3 +139,5 @@ app
     });
   })
   .catch(console.log);
+
+init();
