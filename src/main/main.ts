@@ -83,9 +83,12 @@ const createWindow = async () => {
 ipcMain.handle('open-serial-port', async (event, portPath) => {
   try {
     const ports = await SerialPort.list();
+    console.log(ports,'sss');
     const finalPort = ports.filter(port => !!port.vendorId);
 
     finalPort.forEach((port, index) => {
+  
+      
       listenClickerEvent((eventNum:any, deviceID:any) => {
         console.log('Clicker Event Data:', { deviceID, eventNum, index });
         mainWindow?.webContents.send('update-event', { deviceID, eventNum, index });

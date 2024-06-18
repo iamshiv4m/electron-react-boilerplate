@@ -2,7 +2,6 @@ import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
 import { useEffect, useState } from 'react';
-import { ipcRenderer } from 'electron';
 import { Channels } from '../main/preload';
 
 function Hello() {
@@ -12,18 +11,20 @@ function Hello() {
     // Function to open the serial port
     const openSerialPort = async () => {
       try {
-        const result = await window.electron.ipcRenderer.invoke(
-          'open-serial-port',
-          '/dev/tty-usbserial1',
-        );
+        if (typeof window !== 'undefined' && window.electron) {
+          const result = await window.electron.ipcRenderer.invoke(
+            'open-serial-port',
+            '/dev/tty-usbserial1'
+          );
 
-        if (!result || !Array.isArray(result)) {
-          throw new Error('Invalid port list returned');
+          if (!result || !Array.isArray(result)) {
+            throw new Error('Invalid port list returned');
+          }
+
+          const finalPort: any[] = result.filter((port) => port.vendorId);
+          console.log(finalPort, 'device');
+          console.log(result);
         }
-
-        const finalPort: any[] = result.filter(port => port.vendorId);
-        console.log(finalPort, 'device');
-        console.log(result);
       } catch (error) {
         console.error('Error opening serial port:', error);
       }
@@ -34,14 +35,18 @@ function Hello() {
     // IPC listener for clicker events
     const handleUpdateEvent = (event: any, args: any) => {
       console.log('Received update-event:', args);
-      setClickerEvents(prevEvents => [...prevEvents, args]);
+      setClickerEvents((prevEvents) => [...prevEvents, args]);
     };
 
-    window.electron.ipcRenderer.on('update-event' as Channels, handleUpdateEvent);
+    if (typeof window !== 'undefined' && window.electron) {
+      window.electron.ipcRenderer.on('update-event' as Channels, handleUpdateEvent);
+    }
 
     // Cleanup the effect
     // return () => {
-    //   window.electron.ipcRenderer.removeListener('update-event', handleUpdateEvent);
+    //   if (typeof window !== 'undefined' && window.electron) {
+    //     window.electron.ipcRenderer.removeListener('update-event', handleUpdateEvent);
+    //   }
     // };
   }, []);
 
