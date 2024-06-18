@@ -1,45 +1,53 @@
-import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
 import { register } from '../Clicker-SDK/register';
 import { listenClickerEvent } from '../Clicker-SDK';
 
 function Hello() {
-  const openSerialPort = async () => {
-    try {
-      const result = await window.electron.ipcRenderer.invoke(
-        'open-serial-port',
-        '/dev/tty-usbserial1',
-      );
+  useEffect(() => {
+    const openSerialPort = async () => {
+      try {
+        const result = await window.electron.ipcRenderer.invoke(
+          'open-serial-port',
+          '/dev/tty-usbserial1'
+        );
 
-      if (!result || !Array.isArray(result)) {
-        throw new Error('Invalid port list returned');
-      }
-
-      let count = 1;
-      const finalPort: any[] = [];
-      for (const port of result) {
-        if (!port.vendorId) {
-          continue;
+        if (!result || !Array.isArray(result)) {
+          throw new Error('Invalid port list returned');
         }
-        finalPort.push(port);
+
+        let count = 1;
+        const finalPort: any[] = [];
+        for (const port of result) {
+          if (!port.vendorId) {
+            continue;
+          }
+          finalPort.push(port);
+        }
+
+      // listenClickerEvent((eventNum: any, deviceID: any) => {
+      //   console.log(count);
+      //   console.log(deviceID);
+      //   console.log(eventNum);
+      // });
+
+        console.log(finalPort, 'device');
+        console.log(result);
+      } catch (error) {
+        console.error('Error opening serial port:', error);
       }
+    };
 
-      listenClickerEvent((eventNum: any, deviceID: any) => {
-        console.log(count);
-        console.log(deviceID);
-        console.log(eventNum);
-      });
+    openSerialPort();
 
-      console.log(finalPort, 'device');
+   
 
-      console.log(result);
-    } catch (error) {
-      console.error('Error opening serial port:', error);
-    }
-  };
-
-  openSerialPort();
+    // return () => {
+    //   window.electron.ipcRenderer.removeListener('listen-clicker-event', handleClickerEvent);
+    // };
+  }, []);
 
   return (
     <div>
@@ -72,9 +80,6 @@ function Hello() {
             Donate
           </button>
         </a>
-        {/* <button type="button" onClick={openSerialPort}>
-          Open Serial Port
-        </button> */}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ function onRemoteControlData(data) {
 }
 
 function init() {
+  console.log('hey 2');
   rcControlService.open();
   rcControlService.subscribeEvents((data) => onRemoteControlData(data));
 }
@@ -27,6 +28,7 @@ function stopListening() {
 }
 
 function listenClickerEvent(callbackArg) {
+  console.log('hey 1');
   init();
   callback = callbackArg;
 }
