@@ -3,18 +3,34 @@ import icon from '../../assets/icon.svg';
 import './App.css';
 import { useEffect, useState } from 'react';
 import { Channels } from '../main/preload';
+import '../../global';
+import { isWindowDefined } from '../../global';
 
+declare global {
+  interface Window {
+    electron: {
+      ipcRenderer: {
+        sendMessage(channel: string, ...args: unknown[]): void;
+        on(channel: string, func: (...args: unknown[]) => void): () => void;
+        once(channel: string, func: (...args: unknown[]) => void): void;
+        invoke(channel: string, ...args: unknown[]): Promise<unknown>;
+      };
+    };
+  }
+}
 function Hello() {
   const [clickerEvents, setClickerEvents] = useState<any[]>([]);
 
   useEffect(() => {
+    console.log(window.navigator.userAgent.includes('Electron'), 'checlk');
+
     // Function to open the serial port
     const openSerialPort = async () => {
       try {
         if (typeof window !== 'undefined' && window.electron) {
           const result = await window.electron.ipcRenderer.invoke(
             'open-serial-port',
-            '/dev/tty-usbserial1'
+            '/dev/tty-usbserial1',
           );
 
           if (!result || !Array.isArray(result)) {
@@ -39,7 +55,10 @@ function Hello() {
     };
 
     if (typeof window !== 'undefined' && window.electron) {
-      window.electron.ipcRenderer.on('update-event' as Channels, handleUpdateEvent);
+      window.electron.ipcRenderer.on(
+        'update-event' as Channels,
+        handleUpdateEvent,
+      );
     }
 
     // Cleanup the effect
@@ -87,7 +106,8 @@ function Hello() {
         <ul>
           {clickerEvents.map((event, index) => (
             <li key={index}>
-              Device ID: {event.deviceID}, Event Number: {event.eventNum}, Index: {event.index}
+              Device ID: {event.deviceID}, Event Number: {event.eventNum},
+              Index: {event.index}
             </li>
           ))}
         </ul>

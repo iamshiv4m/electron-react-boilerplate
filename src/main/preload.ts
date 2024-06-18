@@ -1,7 +1,6 @@
-// Disable no-unused-vars, broken for spread args
-/* eslint no-unused-vars: off */
-import { contextBridge, IpcRendererEvent } from 'electron';
-const { ipcRenderer } = window.require('electron');
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
+
+// Define the available channels
 export type Channels = 'ipc-example' | 'open-serial-port'; // Add your channels here
 
 const electronHandler = {

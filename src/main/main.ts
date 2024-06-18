@@ -5,9 +5,9 @@ import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { SerialPort } from 'serialport';
-import { init, listenClickerEvent } from '../Clicker-SDK';
+import { listenClickerEvent } from '../Clicker-SDK';
 import * as $ from 'jquery';
-
+const init = require('../Clicker-SDK').init;
 
 class AppUpdater {
   constructor() {
@@ -41,7 +41,7 @@ const createWindow = async () => {
       nodeIntegration: true,
     },
   });
-  
+
   const indexPath = resolveHtmlPath('index.html');
   console.log('Loading index.html from:', indexPath); // Debugging line
   mainWindow.loadURL(indexPath);
@@ -73,25 +73,25 @@ const createWindow = async () => {
     const { deviceID, eventNum, index } = args;
 
     console.log(deviceID, eventNum, index);
-   
   });
 
-  init();
   new AppUpdater();
 };
 
 ipcMain.handle('open-serial-port', async (event, portPath) => {
   try {
     const ports = await SerialPort.list();
-    console.log(ports,'sss');
-    const finalPort = ports.filter(port => !!port.vendorId);
+    console.log(ports, 'sss');
+    const finalPort = ports.filter((port) => !!port.vendorId);
 
     finalPort.forEach((port, index) => {
-  
-      
-      listenClickerEvent((eventNum:any, deviceID:any) => {
+      listenClickerEvent((eventNum: any, deviceID: any) => {
         console.log('Clicker Event Data:', { deviceID, eventNum, index });
-        mainWindow?.webContents.send('update-event', { deviceID, eventNum, index });
+        mainWindow?.webContents.send('update-event', {
+          deviceID,
+          eventNum,
+          index,
+        });
       });
     });
 
@@ -117,3 +117,5 @@ app.whenReady().then(() => {
     }
   });
 });
+
+init();
