@@ -1,38 +1,27 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import icon from '../../assets/icon.svg';
 import './App.css';
-import { register } from '../Clicker-SDK/register';
-import { listenClickerEvent } from '../Clicker-SDK';
+import { useEffect, useState } from 'react';
+import { ipcRenderer } from 'electron';
+import { Channels } from '../main/preload';
 
 function Hello() {
+  const [clickerEvents, setClickerEvents] = useState<any[]>([]);
+
   useEffect(() => {
+    // Function to open the serial port
     const openSerialPort = async () => {
       try {
         const result = await window.electron.ipcRenderer.invoke(
           'open-serial-port',
-          '/dev/tty-usbserial1'
+          '/dev/tty-usbserial1',
         );
 
         if (!result || !Array.isArray(result)) {
           throw new Error('Invalid port list returned');
         }
 
-        let count = 1;
-        const finalPort: any[] = [];
-        for (const port of result) {
-          if (!port.vendorId) {
-            continue;
-          }
-          finalPort.push(port);
-        }
-
-      // listenClickerEvent((eventNum: any, deviceID: any) => {
-      //   console.log(count);
-      //   console.log(deviceID);
-      //   console.log(eventNum);
-      // });
-
+        const finalPort: any[] = result.filter(port => port.vendorId);
         console.log(finalPort, 'device');
         console.log(result);
       } catch (error) {
@@ -42,10 +31,17 @@ function Hello() {
 
     openSerialPort();
 
-   
+    // IPC listener for clicker events
+    const handleUpdateEvent = (event: any, args: any) => {
+      console.log('Received update-event:', args);
+      setClickerEvents(prevEvents => [...prevEvents, args]);
+    };
 
+    window.electron.ipcRenderer.on('update-event' as Channels, handleUpdateEvent);
+
+    // Cleanup the effect
     // return () => {
-    //   window.electron.ipcRenderer.removeListener('listen-clicker-event', handleClickerEvent);
+    //   window.electron.ipcRenderer.removeListener('update-event', handleUpdateEvent);
     // };
   }, []);
 
@@ -80,6 +76,16 @@ function Hello() {
             Donate
           </button>
         </a>
+      </div>
+      <div>
+        <h2>Clicker Events</h2>
+        <ul>
+          {clickerEvents.map((event, index) => (
+            <li key={index}>
+              Device ID: {event.deviceID}, Event Number: {event.eventNum}, Index: {event.index}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

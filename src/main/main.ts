@@ -1,11 +1,13 @@
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, ipcRenderer } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { SerialPort } from 'serialport';
 import { init, listenClickerEvent } from '../Clicker-SDK';
+import * as $ from 'jquery';
+
 
 class AppUpdater {
   constructor() {
@@ -17,7 +19,6 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
-// Function to create the main application window
 const createWindow = async () => {
   const RESOURCES_PATH = app.isPackaged
     ? path.join(process.resourcesPath, 'assets')
@@ -40,8 +41,10 @@ const createWindow = async () => {
       nodeIntegration: true,
     },
   });
-
-  mainWindow.loadURL(resolveHtmlPath('index.html'));
+  
+  const indexPath = resolveHtmlPath('index.html');
+  console.log('Loading index.html from:', indexPath); // Debugging line
+  mainWindow.loadURL(indexPath);
 
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
@@ -61,51 +64,41 @@ const createWindow = async () => {
   const menuBuilder = new MenuBuilder(mainWindow);
   menuBuilder.buildMenu();
 
-  // Open urls in the user's browser
   mainWindow.webContents.setWindowOpenHandler((edata) => {
     shell.openExternal(edata.url);
     return { action: 'deny' };
   });
 
-  // Listen for 'update-event' messages from renderer process
   ipcMain.on('update-event', (event, args) => {
     const { deviceID, eventNum, index } = args;
+
     console.log(deviceID, eventNum, index);
-    // Update your UI here using deviceID, eventNum, and index
-    // Example:
-    // mainWindow?.webContents.send('some-message-to-renderer', { deviceID, eventNum, index });
+   
   });
 
-  // Initialize your application
   init();
-
-  // Remove this if your app does not use auto updates
   new AppUpdater();
 };
 
-// Handle serial port requests
 ipcMain.handle('open-serial-port', async (event, portPath) => {
   try {
-    const ports = await SerialPort.list(); // Getting the list of available serial ports
-    const finalPort = ports.filter(port => !!port.vendorId); // Filter ports with vendorId
+    const ports = await SerialPort.list();
+    const finalPort = ports.filter(port => !!port.vendorId);
 
-    // Iterate over filtered ports
     finalPort.forEach((port, index) => {
       listenClickerEvent((eventNum:any, deviceID:any) => {
-        console.log(deviceID,'sss');
-        console.log(eventNum);
+        console.log('Clicker Event Data:', { deviceID, eventNum, index });
         mainWindow?.webContents.send('update-event', { deviceID, eventNum, index });
       });
     });
 
-    return finalPort; // Return the list of valid ports
+    return finalPort;
   } catch (error) {
     console.error('Error opening serial port:', error);
     return { success: false, message: error };
   }
 });
 
-// Application lifecycle events
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
