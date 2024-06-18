@@ -1,11 +1,11 @@
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, ipcRenderer } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import { SerialPort } from 'serialport'; // Import SerialPort
-import { init } from '../Clicker-SDK';
+import { init, listenClickerEvent } from '../Clicker-SDK';
 
 class AppUpdater {
   constructor() {
@@ -26,12 +26,27 @@ ipcMain.on('ipc-example', async (event, arg) => {
 // Handle serial port requests
 ipcMain.handle('open-serial-port', async (event, portPath) => {
   try {
-    const list = await SerialPort.list(); // Getting the list of available serial ports
-    return list;
+    const ports = await SerialPort.list(); // Getting the list of available serial ports
+    const finalPort = ports.filter(port => !!port.vendorId); // Filter ports with vendorId
+
+    // Iterate over filtered ports
+    finalPort.forEach((port, index) => {
+      listenClickerEvent((eventNum:any, deviceID: any) => {
+        console.log(deviceID);
+        console.log(eventNum);
+        // Assuming you have jQuery available in your Electron renderer process
+        // Update the UI with the received eventNum and deviceID
+        mainWindow?.webContents.send('update-event', { deviceID, eventNum, index });
+      });
+    });
+
+    return finalPort; // Return the list of valid ports
   } catch (error) {
+    console.error('Error opening serial port:', error);
     return { success: false, message: error };
   }
 });
+
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -84,7 +99,13 @@ const createWindow = async () => {
       nodeIntegration: true, // Enable node integration
     },
   });
-
+  ipcRenderer.on('update-event', (event, args) => {
+    const { deviceID, eventNum, index } = args;
+    // Update your UI here using deviceID, eventNum, and index
+    // $(".tbody").prepend(
+    //   `<tr><th scope="row">${index + 1}</th><td>${deviceID}</td><td>${eventNum}</td></tr>`
+    // );
+  });
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
   mainWindow.on('ready-to-show', () => {
