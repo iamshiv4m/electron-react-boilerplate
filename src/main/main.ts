@@ -14,6 +14,8 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import { listenClickerEvent, portList, stopListening } from '../ClickerSDk';
+import { register } from '../ClickerSDk/register';
 
 class AppUpdater {
   constructor() {
@@ -115,6 +117,33 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
+ipcMain.handle('get-port-list', async () => {
+  try {
+    const ports: any = await portList();
+    const finalPort = ports.filter((port: any) => port.vendorId);
+    return finalPort;
+  } catch (error) {
+    console.log(error, 'ERROR');
+    return [];
+  }
+});
+
+ipcMain.on('start-listening', (event, count) => {
+  listenClickerEvent((eventNum: any, deviceID: any) => {
+    console.log(count);
+    console.log(deviceID);
+    console.log(eventNum);
+    event.sender.send('clicker-event', { count, eventNum, deviceID });
+  });
+});
+
+ipcMain.on('stop-listening', () => {
+  stopListening();
+});
+
+ipcMain.handle('register', async (classNum, studentNum, clickerNum) => {
+  return await register(classNum, studentNum, clickerNum);
+});
 
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even

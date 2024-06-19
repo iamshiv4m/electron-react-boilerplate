@@ -128,7 +128,7 @@
     "css-loader": "^6.8.1",
     "css-minimizer-webpack-plugin": "^5.0.1",
     "detect-port": "^1.5.1",
-    "electron": "^26.2.1",
+    "electron": "^17.0.0",
     "electron-builder": "^24.6.4",
     "electron-devtools-installer": "^3.2.0",
     "electronmon": "^2.0.2",
@@ -168,7 +168,12 @@
     "webpack-bundle-analyzer": "^4.9.1",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1",
-    "webpack-merge": "^5.9.0"
+    "webpack-merge": "^5.9.0",
+    "electron-squirrel-startup": "^1.0.0",
+    "is-elevated": "^3.0.0",
+    "rxjs": "^6.5.2",
+    "serialport": "^10.3.0",
+    "tableify": "^1.1.1"
   },
   "build": {
     "productName": "ElectronReact",
