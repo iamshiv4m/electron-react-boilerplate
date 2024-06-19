@@ -14,8 +14,6 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { listenClickerEvent, portList, stopListening } from '../ClickerSDk';
-import { register } from '../ClickerSDk/register';
 
 class AppUpdater {
   constructor() {
@@ -117,32 +115,30 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
-ipcMain.handle('get-port-list', async () => {
-  try {
-    const ports: any = await portList();
-    const finalPort = ports.filter((port: any) => port.vendorId);
-    return finalPort;
-  } catch (error) {
-    console.log(error, 'ERROR');
-    return [];
-  }
+// Communication between main and renderer
+ipcMain.handle('list-serial-ports', async () => {
+  const { portList } = require('../src/Taghive-Clicker-SDK');
+  const ports = await portList();
+  return ports;
 });
 
-ipcMain.on('start-listening', (event, count) => {
-  listenClickerEvent((eventNum: any, deviceID: any) => {
-    console.log(count);
-    console.log(deviceID);
-    console.log(eventNum);
-    event.sender.send('clicker-event', { count, eventNum, deviceID });
-  });
+ipcMain.handle(
+  'register-clicker',
+  async (event, classNum, studentNum, clickerNum) => {
+    const { register } = require('../src/Taghive-Clicker-SDK');
+    const clickerId = await register(classNum, studentNum, clickerNum);
+    return clickerId;
+  },
+);
+
+ipcMain.handle('listen-clicker-event', async (event) => {
+  const { listenClickerEvent } = require('../src/Taghive-Clicker-SDK');
+  return listenClickerEvent;
 });
 
-ipcMain.on('stop-listening', () => {
-  stopListening();
-});
-
-ipcMain.handle('register', async (classNum, studentNum, clickerNum) => {
-  return await register(classNum, studentNum, clickerNum);
+ipcMain.handle('stop-listening', async () => {
+  const { stopListening } = require('../src/Taghive-Clicker-SDK');
+  return stopListening;
 });
 
 app.on('window-all-closed', () => {
