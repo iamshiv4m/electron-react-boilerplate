@@ -6,13 +6,9 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import {
-  init,
-  listenClickerEvent,
-  portList,
-  stopListening,
-} from '../ClickerSDk';
+import { init, portList, stopListening } from '../ClickerSDk';
 import { register } from '../ClickerSDk/register';
+import { listenClickerEvent } from '../ClickerSDk';
 
 class AppUpdater {
   constructor() {
@@ -118,10 +114,31 @@ console.log('Adding event listeners...');
 ipcMain.handle('get-port-list', async () => {
   try {
     console.log('Fetching port list...');
+    let count = 1;
     const ports: any = await portList();
-    const finalPort = ports.filter((port: any) => port.vendorId);
-    console.log('Port list:', finalPort);
-    return finalPort;
+    console.log('ports: ', ports);
+    const finalPort = [];
+    for (const port of ports) {
+      if (!port.vendorId) {
+        continue;
+      }
+      finalPort.push(port);
+      console.log('hello world');
+      listenClickerEvent((eventNum: any, deviceID: any) => {
+        console.log(count);
+        console.log(deviceID);
+        console.log(eventNum);
+        /*  $('.tbody').prepend(
+              '<tr><th scope="row">' +
+                count++ +
+                '</th><td>' +
+                deviceID +
+                '</td><td>' +
+                eventNum +
+                '</td</tr>',
+            ); */
+      });
+    }
   } catch (error) {
     console.log(error, 'ERROR');
     return [];
@@ -164,6 +181,7 @@ app
   .whenReady()
   .then(() => {
     createWindow();
+    console.log('init');
     init();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
@@ -172,5 +190,7 @@ app
     });
   })
   .catch(console.log);
+
+console.log(init, 'check here');
 
 console.log('hello world!');

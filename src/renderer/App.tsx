@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { listenClickerEvent } from '../ClickerSDk';
 
 declare global {
   interface Window {
@@ -24,7 +25,7 @@ const App: React.FC = () => {
   useEffect(() => {
     async function fetchPorts() {
       try {
-        const portList = await window.electron.getPortList();
+        const portList: any = await window.electron.getPortList();
         setPorts(portList);
       } catch (error) {
         console.error('Error fetching ports:', error);
@@ -33,31 +34,6 @@ const App: React.FC = () => {
 
     fetchPorts();
   }, []);
-  console.log(ports, 'port');
-
-  useEffect(() => {
-    window.electron.onClickerEvent((data) => {
-      console.log('data: ', data);
-      console.log(data.count);
-      console.log(data.deviceID);
-      console.log(data.eventNum);
-      const tbody = document.querySelector('.tbody');
-      if (tbody) {
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-          <th scope="row">${data.count}</th>
-          <td>${data.deviceID}</td>
-          <td>${data.eventNum}</td>
-        `;
-        tbody.prepend(newRow);
-      }
-      setCount(data.count + 1);
-    });
-  }, [count]);
-
-  const handleStartListening = () => {
-    window.electron.startListening();
-  };
 
   return (
     <div>
