@@ -14,7 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { listenClickerEvent, portList, stopListening } from '../ClickerSDk';
+import { init, listenClickerEvent, portList, stopListening } from '../ClickerSDk';
 import { register } from '../ClickerSDk/register';
 
 class AppUpdater {
@@ -117,6 +117,7 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
+init();
 ipcMain.handle('get-port-list', async () => {
   try {
     const ports: any = await portList();

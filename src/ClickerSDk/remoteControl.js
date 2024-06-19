@@ -74,7 +74,7 @@ class RemoteControlService {
 }
 
 function checkElectronValidity() {
-  if (!window.navigator.userAgent.match(/Electron/)) {
+  if (!process.versions.electron) {
     console.log("this is not electron app");
     return false;
   }
