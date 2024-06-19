@@ -1,10 +1,17 @@
+console.log('Starting main process...');
+
 import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { listenClickerEvent, portList, stopListening } from '../ClickerSDk';
+import {
+  init,
+  listenClickerEvent,
+  portList,
+  stopListening,
+} from '../ClickerSDk';
 import { register } from '../ClickerSDk/register';
 
 class AppUpdater {
@@ -17,72 +24,42 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 
-ipcMain.handle('get-port-list', async (event) => {
-  try {
-    const ports: any = await portList();
-    const finalPort = [];
-    for (const port of ports) {
-      if (!port.vendorId) {
-        continue;
-      }
-      finalPort.push(port);
-    }
-    // Send final port list to renderer process
-    event.sender.send('port-list', finalPort);
+console.log('Setting up IPC handlers...');
 
-    // Setup the clicker event listener
-    listenClickerEvent((eventNum: any, deviceID: any) => {
-      console.log('Clicker event received:', eventNum, deviceID);
-      event.sender.send('clicker-event', { eventNum, deviceID });
-    });
-
-    return finalPort;
-  } catch (error) {
-    console.log(error, 'ERROR');
-    return [];
-  }
+ipcMain.on('ipc-example', async (event, arg) => {
+  const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
+  console.log(msgTemplate(arg));
+  event.reply('ipc-example', msgTemplate('pong'));
 });
 
-ipcMain.on('start-listening', (event) => {
-  listenClickerEvent((eventNum: any, deviceID: any) => {
-    console.log('Clicker event received:', eventNum, deviceID);
-    event.sender.send('clicker-event', { eventNum, deviceID });
-  });
-});
+if (process.env.NODE_ENV === 'production') {
+  const sourceMapSupport = require('source-map-support');
+  sourceMapSupport.install();
+}
 
-ipcMain.on('stop-listening', () => {
-  stopListening();
-});
+const isDebug =
+  process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
 
-ipcMain.handle(
-  'register',
-  async (event, { classNum, studentNum, clickerNum }) => {
-    return await register(classNum, studentNum, clickerNum);
-  },
-);
+if (isDebug) {
+  require('electron-debug')();
+}
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+const installExtensions = async () => {
+  const installer = require('electron-devtools-installer');
+  const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
+  const extensions = ['REACT_DEVELOPER_TOOLS'];
 
-app
-  .whenReady()
-  .then(() => {
-    createWindow();
-    app.on('activate', () => {
-      if (mainWindow === null) createWindow();
-    });
-  })
-  .catch(console.log);
+  return installer
+    .default(
+      extensions.map((name) => installer[name]),
+      forceDownload,
+    )
+    .catch(console.log);
+};
 
 const createWindow = async () => {
-  const isDebug =
-    process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true';
-
   if (isDebug) {
-    require('electron-debug')();
+    await installExtensions();
   }
 
   const RESOURCES_PATH = app.isPackaged
@@ -92,6 +69,8 @@ const createWindow = async () => {
   const getAssetPath = (...paths: string[]): string => {
     return path.join(RESOURCES_PATH, ...paths);
   };
+
+  console.log('Creating browser window...');
 
   mainWindow = new BrowserWindow({
     show: false,
@@ -133,3 +112,65 @@ const createWindow = async () => {
 
   new AppUpdater();
 };
+
+console.log('Adding event listeners...');
+
+ipcMain.handle('get-port-list', async () => {
+  try {
+    console.log('Fetching port list...');
+    const ports: any = await portList();
+    const finalPort = ports.filter((port: any) => port.vendorId);
+    console.log('Port list:', finalPort);
+    return finalPort;
+  } catch (error) {
+    console.log(error, 'ERROR');
+    return [];
+  }
+});
+
+ipcMain.on('start-listening', (event, count) => {
+  console.log('Start listening...');
+  listenClickerEvent((eventNum: any, deviceID: any) => {
+    console.log(count);
+    console.log(deviceID);
+    console.log(eventNum);
+    event.sender.send('clicker-event', { count, eventNum, deviceID });
+  });
+});
+
+ipcMain.on('stop-listening', () => {
+  console.log('Stop listening...');
+  stopListening();
+});
+
+ipcMain.handle(
+  'register',
+  async (event, { classNum, studentNum, clickerNum }) => {
+    console.log('Registering clicker...');
+    return await register(classNum, studentNum, clickerNum);
+  },
+);
+
+app.on('window-all-closed', () => {
+  // Respect the OSX convention of having the application in memory even
+  // after all windows have been closed
+  if (process.platform !== 'darwin') {
+    console.log('Quitting app...');
+    app.quit();
+  }
+});
+
+app
+  .whenReady()
+  .then(() => {
+    createWindow();
+    init();
+    app.on('activate', () => {
+      // On macOS it's common to re-create a window in the app when the
+      // dock icon is clicked and there are no other windows open.
+      if (mainWindow === null) createWindow();
+    });
+  })
+  .catch(console.log);
+
+console.log('hello world!');

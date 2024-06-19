@@ -12,7 +12,7 @@ declare global {
         classNum: number,
         studentNum: number,
         clickerNum: number,
-      ) => any;
+      ) => Promise<string>;
     };
   }
 }
@@ -20,76 +20,43 @@ declare global {
 const App: React.FC = () => {
   const [ports, setPorts] = useState<any[]>([]);
   const [count, setCount] = useState(1);
-  const [registerKey, setRegisterKey] = useState('');
-  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
     async function fetchPorts() {
       try {
-        await window.electron.getPortList();
+        const portList = await window.electron.getPortList();
+        setPorts(portList);
       } catch (error) {
         console.error('Error fetching ports:', error);
       }
     }
 
     fetchPorts();
+  }, []);
+  console.log(ports, 'port');
 
-    window.electron.onPortList((portList) => {
-      setPorts(portList);
-    });
-
+  useEffect(() => {
     window.electron.onClickerEvent((data) => {
-      console.log(data.eventNum, 'check');
+      console.log('data: ', data);
+      console.log(data.count);
       console.log(data.deviceID);
+      console.log(data.eventNum);
       const tbody = document.querySelector('.tbody');
       if (tbody) {
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
-          <th scope="row">${count}</th>
+          <th scope="row">${data.count}</th>
           <td>${data.deviceID}</td>
           <td>${data.eventNum}</td>
         `;
         tbody.prepend(newRow);
       }
-      setCount(count + 1);
+      setCount(data.count + 1);
     });
   }, [count]);
 
   const handleStartListening = () => {
-    if (isListening) {
-      window.electron.stopListening();
-      setIsListening(false);
-    } else {
-      window.electron.startListening();
-      setIsListening(true);
-    }
-  };
-
-  const handleRegister = () => {
-    console.log(window?.electron?.register(255, 255, 2 + 2), 'check');
-    return;
-    window.electron.stopListening();
-    setRegisterKey('');
-
-    const handleWindowClick = (event: MouseEvent) => {
-      if (registerKey !== 'Register is successful!') {
-        window.electron.stopListening();
-      }
-      window.removeEventListener('click', handleWindowClick);
-    };
-
-    window.addEventListener('click', handleWindowClick);
-
-    const classNum = 255;
-    const studentNum = 255;
-    const clickerNum = Math.floor(Math.random() * 4) + 2;
-    setRegisterKey(`Press clicker number ${clickerNum}`);
-
-    window.electron
-      .register(classNum, studentNum, clickerNum)
-      .then((clickerId: any) => {
-        setRegisterKey('Register is successful!');
-      });
+    window.electron.startListening();
   };
 
   return (
@@ -102,14 +69,9 @@ const App: React.FC = () => {
           </li>
         ))}
       </ul>
-      <button id="startListening" onClick={handleStartListening}>
-        {isListening ? 'Stop Listening' : 'Start Listening'}
-      </button>
-      <button id="register" onClick={handleRegister}>
-        Register
-      </button>
-      <div id="h1"></div>
-      <div id="registerKey">{registerKey}</div>
+      {/* <button id="startListening" onClick={handleStartListening}>
+        Start Listening
+      </button> */}
       <table>
         <tbody className="tbody"></tbody>
       </table>
