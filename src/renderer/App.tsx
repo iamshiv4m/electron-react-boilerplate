@@ -4,14 +4,15 @@ declare global {
   interface Window {
     electron: {
       getPortList: () => Promise<any>;
-      startListening: (count: number) => void;
-      onClickerEvent: (callback: (data: any) => void) => void;
+      startListening: () => void;
       stopListening: () => void;
+      onPortList: (callback: (ports: any) => void) => void;
+      onClickerEvent: (callback: (data: any) => void) => void;
       register: (
         classNum: number,
         studentNum: number,
         clickerNum: number,
-      ) => Promise<string>;
+      ) => any;
     };
   }
 }
@@ -25,32 +26,32 @@ const App: React.FC = () => {
   useEffect(() => {
     async function fetchPorts() {
       try {
-        const portList = await window.electron.getPortList();
-        setPorts(portList);
+        await window.electron.getPortList();
       } catch (error) {
         console.error('Error fetching ports:', error);
       }
     }
 
     fetchPorts();
-  }, []);
 
-  useEffect(() => {
+    window.electron.onPortList((portList) => {
+      setPorts(portList);
+    });
+
     window.electron.onClickerEvent((data) => {
-      console.log(data.count);
+      console.log(data.eventNum, 'check');
       console.log(data.deviceID);
-      console.log(data.eventNum);
       const tbody = document.querySelector('.tbody');
       if (tbody) {
         const newRow = document.createElement('tr');
         newRow.innerHTML = `
-          <th scope="row">${data.count}</th>
+          <th scope="row">${count}</th>
           <td>${data.deviceID}</td>
           <td>${data.eventNum}</td>
         `;
         tbody.prepend(newRow);
       }
-      setCount(data.count + 1);
+      setCount(count + 1);
     });
   }, [count]);
 
@@ -59,12 +60,14 @@ const App: React.FC = () => {
       window.electron.stopListening();
       setIsListening(false);
     } else {
-      window.electron.startListening(count);
+      window.electron.startListening();
       setIsListening(true);
     }
   };
 
   const handleRegister = () => {
+    console.log(window?.electron?.register(255, 255, 2 + 2), 'check');
+    return;
     window.electron.stopListening();
     setRegisterKey('');
 
@@ -84,7 +87,7 @@ const App: React.FC = () => {
 
     window.electron
       .register(classNum, studentNum, clickerNum)
-      .then((clickerId) => {
+      .then((clickerId: any) => {
         setRegisterKey('Register is successful!');
       });
   };
