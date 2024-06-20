@@ -1,10 +1,10 @@
-const ElectronService = require("electron");
-const { Subject } = require("rxjs");
+const ElectronService = require('../../../electron-service');
+const { Subject } = require('rxjs');
 
 class RemoteControlService {
   constructor() {
     this.events = new Subject();
-    this._receivedBuffer;
+    this._receivedBuffer = Buffer.alloc(0);
     this.isListening = false;
   }
 
@@ -12,25 +12,25 @@ class RemoteControlService {
     if (!checkElectronValidity()) return false;
     if (!this.isListening) {
       this.isListening = true;
-      ElectronService.ipcRenderer.on("serialport", (event, data) => {
+      ElectronService.ipcRenderer.on('serialport', (event, data) => {
         onSerialPortData(this.events, this._receivedBuffer, event, data);
       });
     }
-    ElectronService.ipcRenderer.send("serialport", { type: "open" });
+    ElectronService.ipcRenderer.send('serialport', { type: 'open' });
     this._receivedBuffer = Buffer.alloc(0);
     return true;
   }
 
   close() {
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", { type: "close" });
+    ElectronService.ipcRenderer.send('serialport', { type: 'close' });
     this._receivedBuffer = Buffer.alloc(0);
     return true;
   }
 
   subscribeEvents(callbackArg) {
     if (this.subscription) {
-      unsubscribeEvents();
+      this.unsubscribeEvents();
     }
     this.subscription = this.events.subscribe((data) => callbackArg(data));
   }
@@ -43,10 +43,9 @@ class RemoteControlService {
   }
 
   startRegister(classNumber, number, registrationKey) {
-    console.log(classNumber, number, registrationKey, "HERREEE");
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", {
-      type: "write",
+    ElectronService.ipcRenderer.send('serialport', {
+      type: 'write',
       payload: [
         0x02,
         0x07,
@@ -65,8 +64,8 @@ class RemoteControlService {
 
   finishRegister() {
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", {
-      type: "write",
+    ElectronService.ipcRenderer.send('serialport', {
+      type: 'write',
       payload: [0x02, 0x07, 0x00, 0x00, 0x10, 0x10, 0x00, 0x19, 0x03, 0x0d],
     });
     return true;
@@ -74,12 +73,13 @@ class RemoteControlService {
 }
 
 function checkElectronValidity() {
-  if (!window.navigator.userAgent.match(/Electron/)) {
-    console.log("this is not electron app");
+  if (!process.versions.electron) {
+    console.log('this is not electron app');
     return false;
   }
+  console.log(ElectronService.ipcRenderer, 'check');
   if (!ElectronService.ipcRenderer) {
-    console.log("you are calling from ipcMain");
+    console.log('you are calling from ipcMain');
     return false;
   }
   return true;
@@ -89,19 +89,19 @@ function onSerialPortData(events, receivedBuffer, _event, data) {
   const eventsSubject = events;
 
   switch (data.type) {
-    case "opened":
-      eventsSubject.next({ type: "opened" });
+    case 'opened':
+      eventsSubject.next({ type: 'opened' });
       break;
-    case "closed":
-      eventsSubject.next({ type: "closed" });
+    case 'closed':
+      eventsSubject.next({ type: 'closed' });
       break;
-    case "error":
-      eventsSubject.next({ type: "error", payload: data.payload });
+    case 'error':
+      eventsSubject.next({ type: 'error', payload: data.payload });
       break;
-    case "data":
+    case 'data':
       receivedBuffer = Buffer.concat(
         [receivedBuffer, data.payload],
-        receivedBuffer.length + data.payload.length
+        receivedBuffer.length + data.payload.length,
       );
 
       while (readyForRead(receivedBuffer)) {
@@ -111,19 +111,19 @@ function onSerialPortData(events, receivedBuffer, _event, data) {
           const addressTokens = [];
           for (let index = 7; index < 13; index++) {
             const token = receivedBuffer[index].toString(16);
-            addressTokens.push(token.length === 2 ? token : "0" + token);
+            addressTokens.push(token.length === 2 ? token : '0' + token);
           }
 
           const payload = {
-            id: addressTokens.join(":"),
+            id: addressTokens.join(':'),
             classNumber: receivedBuffer[2],
             studentNumber: receivedBuffer[3],
           };
 
           switch (receivedBuffer[4]) {
             case 0x11: // payload type : data
-              payload["value"] = receivedBuffer[5];
-              payload["voltage"] = receivedBuffer[6];
+              payload['value'] = receivedBuffer[5];
+              payload['voltage'] = receivedBuffer[6];
               break;
             case 0x10:
               if (receivedBuffer[5] == 2) {
@@ -132,7 +132,7 @@ function onSerialPortData(events, receivedBuffer, _event, data) {
               break;
           }
           eventsSubject.next({
-            type: "clicked",
+            type: 'clicked',
             payload: payload,
             data: data.payload,
           });

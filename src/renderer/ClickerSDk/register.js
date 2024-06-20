@@ -5,9 +5,9 @@ API
 classSaathi.registerStudent(classNum: number, studentNum: number, numberToPress: number): Promise<String>
 
 */
-const { timer } = require("rxjs");
-const rcService = require("./remoteControl");
-let { first } = require("rxjs/operators");
+const { timer } = require('rxjs');
+const rcService = require('./remoteControl');
+let { first } = require('rxjs/operators');
 
 /**
  *
@@ -20,7 +20,7 @@ function register(classNum, studentNum, regKey) {
     rcService.open();
     this.remoteControlEventsSubscription = rcService.events.subscribe(
       (data) => {
-        if (data.type === "opened") {
+        if (data.type === 'opened') {
           console.log(classNum);
           console.log(studentNum);
           console.log(regKey);
@@ -29,7 +29,7 @@ function register(classNum, studentNum, regKey) {
           }
           startRegister(classNum, studentNum, regKey, resolve);
         }
-      }
+      },
     );
   });
 }
@@ -38,7 +38,7 @@ function startRegister(classNum, studentNum, registerNum, resolve) {
   timer(500, 500)
     .pipe(first())
     .subscribe(() => {
-      console.log("Register Scan");
+      console.log('Register Scan');
       rcService.startRegister(classNum, studentNum, registerNum);
       startListening(classNum, studentNum, resolve);
     });
@@ -59,11 +59,11 @@ function startListening(classNum, studentNum, resolve) {
   rcService.subscribeEvents((data) => {
     console.log(data);
     if (isValidRegisterData(data, classNum, studentNum)) {
-      console.log("Finish Register");
+      console.log('Finish Register');
       rcService.startRegister(
         classNum,
         studentNum,
-        Math.floor(Math.random() * 4) + 2
+        Math.floor(Math.random() * 4) + 2,
       );
       /*rcService.finishRegister();
       rcService.unsubscribeEvents();

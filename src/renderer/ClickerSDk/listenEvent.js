@@ -1,10 +1,10 @@
-const rcControlService = require("./remoteControl");
+const rcControlService = require('./remoteControl');
 
 let callback;
 
 function onRemoteControlData(data) {
   switch (data.type) {
-    case "clicked":
+    case 'clicked':
       const deviceID = data.payload.id;
       const eventNum = data.payload.value;
       if (callback) {
