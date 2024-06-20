@@ -76,6 +76,7 @@ const createWindow = async () => {
     height: 728,
     icon: getAssetPath('icon.png'),
     webPreferences: {
+      webSecurity: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
@@ -116,7 +117,7 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
-init();
+
 // Communication between main and renderer
 ipcMain.handle('list-serial-ports', async () => {
   const { portList } = require('../renderer/ClickerSDk');
@@ -168,3 +169,5 @@ app
     });
   })
   .catch(console.log);
+
+  // init();

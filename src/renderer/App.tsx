@@ -1,16 +1,42 @@
 import React, { useEffect } from 'react';
+import { listenClickerEvent, portList } from './ClickerSDk';
 
 const App: React.FC = () => {
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = '/hello.js';
-    script.async = true;
-    document.body.appendChild(script);
+  let count = 1;
 
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
+  // useEffect(() => {
+  //   const script = document.createElement('script');
+  //   script.src = '/hello.js';
+  //   script.async = true;
+  //   document.body.appendChild(script);
+
+  //   return () => {
+  //     document.body.removeChild(script);
+  //   };
+  // }, []);
+
+  // useEffect(() => {
+  //   const fetchPortsAndListen = async () => {
+  //     const ports = await portList() as any;
+  //     const finalPort = [];
+
+  //     for (const port of ports) {
+  //       if (!port.vendorId) {
+  //         continue;
+  //       }
+  //       finalPort.push(port);
+  //     }
+
+  //     listenClickerEvent((eventNum: any, deviceID: any) => {
+  //       console.log(count);
+  //       console.log(deviceID);
+  //       console.log(eventNum);
+  //       // $('.tbody').prepend('<tr><th scope="row">' + (count++) + '</th><td>' + deviceID + '</td><td>' + eventNum + '</td</tr>');
+  //     });
+  //   };
+
+  //   // fetchPortsAndListen();
+  // }, []);
 
   return (
     <div>

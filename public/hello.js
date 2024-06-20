@@ -2,12 +2,12 @@
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
 
-import {
+const {
   stopListening,
   portList,
   listenClickerEvent,
   register,
-} from '../src/renderer/ClickerSDk';
+} =  require('../src/renderer/ClickerSDk');
 
 async function listSerialPorts() {
   console.log('listSerialPorts');
