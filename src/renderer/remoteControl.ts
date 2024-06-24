@@ -1,51 +1,58 @@
-const ElectronService = require("electron");
-const { Subject } = require("rxjs");
+import { ipcRenderer } from "electron";
+import { Subject, Subscription } from "rxjs";
 
 class RemoteControlService {
+  private events: Subject<any>;
+  private _receivedBuffer: Buffer;
+  private isListening: boolean;
+  private subscription: Subscription | null;
+
   constructor() {
     this.events = new Subject();
-    this._receivedBuffer;
+    this._receivedBuffer = Buffer.alloc(0);
     this.isListening = false;
+    this.subscription = null;
   }
 
-  open() {
+  open(): boolean {
     if (!checkElectronValidity()) return false;
     if (!this.isListening) {
       this.isListening = true;
-      ElectronService.ipcRenderer.on("serialport", (event, data) => {
+      console.log("open", ipcRenderer);
+      ipcRenderer.on("serialport", (event, data) => {
         onSerialPortData(this.events, this._receivedBuffer, event, data);
       });
     }
-    ElectronService.ipcRenderer.send("serialport", { type: "open" });
+    ipcRenderer.send("serialport", { type: "open" });
     this._receivedBuffer = Buffer.alloc(0);
     return true;
   }
 
-  close() {
+  close(): boolean {
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", { type: "close" });
+    ipcRenderer.send("serialport", { type: "close" });
     this._receivedBuffer = Buffer.alloc(0);
     return true;
   }
 
-  subscribeEvents(callbackArg) {
+  subscribeEvents(callbackArg: (data: any) => void): void {
     if (this.subscription) {
-      unsubscribeEvents();
+      this.unsubscribeEvents();
     }
     this.subscription = this.events.subscribe((data) => callbackArg(data));
   }
 
-  unsubscribeEvents() {
+  unsubscribeEvents(): void {
     if (this.subscription) {
       this.subscription.unsubscribe();
       this.subscription = null;
     }
   }
 
-  startRegister(classNumber, number, registrationKey) {
+  startRegister(classNumber: number, number: number, registrationKey: number): boolean {
     console.log(classNumber, number, registrationKey, "HERREEE");
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", {
+    ipcRenderer.send("serialport", {
       type: "write",
       payload: [
         0x02,
@@ -63,9 +70,9 @@ class RemoteControlService {
     return true;
   }
 
-  finishRegister() {
+  finishRegister(): boolean {
     if (!checkElectronValidity()) return false;
-    ElectronService.ipcRenderer.send("serialport", {
+    ipcRenderer.send("serialport", {
       type: "write",
       payload: [0x02, 0x07, 0x00, 0x00, 0x10, 0x10, 0x00, 0x19, 0x03, 0x0d],
     });
@@ -73,20 +80,20 @@ class RemoteControlService {
   }
 }
 
-function checkElectronValidity() {
+function checkElectronValidity(): boolean {
   if (!process.versions.electron) {
     console.log("this is not electron app");
     return false;
   }
-  if (!ElectronService.ipcRenderer) {
+  if (!ipcRenderer) {
     console.log("you are calling from ipcMain");
     return false;
   }
   return true;
 }
 
-function onSerialPortData(events, receivedBuffer, _event, data) {
-  const eventsSubject = events;
+function onSerialPortData(events: Subject<any>, receivedBuffer: Buffer, _event: any, data: any): void {
+  let eventsSubject = events;
 
   switch (data.type) {
     case "opened":
@@ -108,13 +115,13 @@ function onSerialPortData(events, receivedBuffer, _event, data) {
         const payloadLength = receivedBuffer[1] + 2;
 
         if (payloadLength === 15) {
-          const addressTokens = [];
+          const addressTokens: string[] = [];
           for (let index = 7; index < 13; index++) {
             const token = receivedBuffer[index].toString(16);
             addressTokens.push(token.length === 2 ? token : "0" + token);
           }
 
-          const payload = {
+          const payload: any = {
             id: addressTokens.join(":"),
             classNumber: receivedBuffer[2],
             studentNumber: receivedBuffer[3],
@@ -144,7 +151,7 @@ function onSerialPortData(events, receivedBuffer, _event, data) {
   }
 }
 
-function readyForRead(receivedBuffer) {
+function readyForRead(receivedBuffer: Buffer): boolean {
   do {
     const stxOffset = receivedBuffer.indexOf(0x02);
 
@@ -193,4 +200,4 @@ function readyForRead(receivedBuffer) {
   } while (true);
 }
 
-module.exports = new RemoteControlService();
+export default new RemoteControlService();

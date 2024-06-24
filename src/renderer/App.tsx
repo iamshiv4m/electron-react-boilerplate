@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-
+import path from 'path';
+import { ipcRenderer } from 'electron';
 declare global {
-  interface Window {
+  interface Window  {
     electron: {
       getPortList: () => Promise<any>;
       startListening: (count: number) => void;
@@ -12,6 +13,7 @@ declare global {
         studentNum: number,
         clickerNum: number,
       ) => Promise<string>;
+      ipcRenderer: typeof ipcRenderer;
     };
   }
 }
@@ -36,7 +38,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    window.electron.onClickerEvent((data) => {
+    window.electron.onClickerEvent((data: any) => {
       console.log(data.count);
       console.log(data.deviceID);
       console.log(data.eventNum);
@@ -84,7 +86,7 @@ const App: React.FC = () => {
 
     window.electron
       .register(classNum, studentNum, clickerNum)
-      .then((clickerId) => {
+      .then((clickerId: string) => {
         setRegisterKey('Register is successful!');
       });
   };
@@ -115,3 +117,5 @@ const App: React.FC = () => {
 };
 
 export default App;
+
+

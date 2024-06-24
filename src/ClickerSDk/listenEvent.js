@@ -1,4 +1,4 @@
-const rcControlService = require("./remoteControl");
+const rcControlService = require("../renderer/remoteControl");
 
 let callback;
 

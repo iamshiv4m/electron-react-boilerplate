@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "target": "es2022",
+    "target": "es6",
     "module": "commonjs",
     "lib": ["dom", "es2022"],
     "jsx": "react-jsx",
@@ -12,7 +12,9 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "allowJs": true,
-    "outDir": ".erb/dll"
+    "outDir": ".erb/dll",
+    "types": ["node", "electron"]
   },
+  "include": ["./src/renderer/**/*"],
   "exclude": ["test", "release/build", "release/app/dist", ".erb/dll"]
 }

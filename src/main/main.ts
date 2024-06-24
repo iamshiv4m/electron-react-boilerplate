@@ -9,12 +9,14 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, ipcRenderer } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { listenClickerEvent, portList, stopListening } from '../ClickerSDk';
+import { portList } from '../renderer/init'
+import { listenClickerEvent } from '../renderer/listenEvent';
+import { stopListening } from '../renderer/listenEvent';
 import { register } from '../ClickerSDk/register';
 
 class AppUpdater {
@@ -80,6 +82,8 @@ const createWindow = async () => {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
+        contextIsolation: true,
+      sandbox: false,
     },
   });
 
@@ -121,6 +125,7 @@ ipcMain.handle('get-port-list', async () => {
   try {
     const ports: any = await portList();
     const finalPort = ports.filter((port: any) => port.vendorId);
+    console.log(finalPort, "finalPort");
     return finalPort;
   } catch (error) {
     console.log(error, 'ERROR');
@@ -128,16 +133,20 @@ ipcMain.handle('get-port-list', async () => {
   }
 });
 
-ipcMain.on('start-listening', (event, count) => {
-  listenClickerEvent((eventNum: any, deviceID: any) => {
-    console.log(count);
-    console.log(deviceID);
-    console.log(eventNum);
-    event.sender.send('clicker-event', { count, eventNum, deviceID });
-  });
+ipcMain.handle('start-listening', (event, count) => {
+  try{
+    listenClickerEvent((eventNum: any, deviceID: any) => {
+      console.log(count);
+      console.log(deviceID);
+      console.log(eventNum);
+      event.sender.send('clicker-event', { count, eventNum, deviceID });
+    });
+  }catch(e){
+    console.log(e);
+  }
 });
 
-ipcMain.on('stop-listening', () => {
+ipcMain.handle('stop-listening', () => {
   stopListening();
 });
 
@@ -164,3 +173,5 @@ app
     });
   })
   .catch(console.log);
+
+

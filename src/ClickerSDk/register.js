@@ -6,7 +6,7 @@ classSaathi.registerStudent(classNum: number, studentNum: number, numberToPress:
 
 */
 const { timer } = require("rxjs");
-const rcService = require("./remoteControl");
+const rcService = require("../renderer/remoteControl");
 let { first } = require("rxjs/operators");
 
 /**
