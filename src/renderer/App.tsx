@@ -1,22 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import path from 'path';
-import { ipcRenderer } from 'electron';
-declare global {
-  interface Window  {
-    electron: {
-      getPortList: () => Promise<any>;
-      startListening: (count: number) => void;
-      onClickerEvent: (callback: (data: any) => void) => void;
-      stopListening: () => void;
-      register: (
-        classNum: number,
-        studentNum: number,
-        clickerNum: number,
-      ) => Promise<string>;
-      ipcRenderer: typeof ipcRenderer;
-    };
-  }
-}
 
 const App: React.FC = () => {
   const [ports, setPorts] = useState<any[]>([]);
@@ -25,70 +7,31 @@ const App: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    async function fetchPorts() {
-      try {
-        const portList = await window.electron.getPortList();
-        setPorts(portList);
-      } catch (error) {
-        console.error('Error fetching ports:', error);
-      }
-    }
-
-    fetchPorts();
+    
   }, []);
-
-  useEffect(() => {
-    window.electron.onClickerEvent((data: any) => {
-      console.log(data.count);
-      console.log(data.deviceID);
-      console.log(data.eventNum);
-      const tbody = document.querySelector('.tbody');
-      if (tbody) {
-        const newRow = document.createElement('tr');
-        newRow.innerHTML = `
-          <th scope="row">${data.count}</th>
-          <td>${data.deviceID}</td>
-          <td>${data.eventNum}</td>
-        `;
-        tbody.prepend(newRow);
-      }
-      setCount(data.count + 1);
-    });
-  }, [count]);
 
   const handleStartListening = () => {
     if (isListening) {
-      window.electron.stopListening();
       setIsListening(false);
+      window.electron.remoteControl.unsubscribeEvents();
+      window.electron.remoteControl.close();
     } else {
-      window.electron.startListening(count);
       setIsListening(true);
-    }
-  };
+      // Open the remote control connection
+    console.log('Opening remote control', window.electron.remoteControl)
+    window.electron.remoteControl.open();
 
-  const handleRegister = () => {
-    window.electron.stopListening();
-    setRegisterKey('');
+    // Subscribe to events
+    window.electron.remoteControl.subscribeEvents((data: any) => {
+      console.log('Received data:', data);
+    });
 
-    const handleWindowClick = (event: MouseEvent) => {
-      if (registerKey !== 'Register is successful!') {
-        window.electron.stopListening();
-      }
-      window.removeEventListener('click', handleWindowClick);
+    // Cleanup on component unmount
+    return () => {
+      window.electron.remoteControl.unsubscribeEvents();
+      window.electron.remoteControl.close();
     };
-
-    window.addEventListener('click', handleWindowClick);
-
-    const classNum = 255;
-    const studentNum = 255;
-    const clickerNum = Math.floor(Math.random() * 4) + 2;
-    setRegisterKey(`Press clicker number ${clickerNum}`);
-
-    window.electron
-      .register(classNum, studentNum, clickerNum)
-      .then((clickerId: string) => {
-        setRegisterKey('Register is successful!');
-      });
+    }
   };
 
   return (
@@ -104,7 +47,7 @@ const App: React.FC = () => {
       <button id="startListening" onClick={handleStartListening}>
         {isListening ? 'Stop Listening' : 'Start Listening'}
       </button>
-      <button id="register" onClick={handleRegister}>
+      <button id="register" onClick={() => {}}>
         Register
       </button>
       <div id="h1"></div>

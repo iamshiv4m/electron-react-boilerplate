@@ -9,15 +9,15 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain, ipcRenderer } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import { portList } from '../renderer/init'
-import { listenClickerEvent } from '../renderer/listenEvent';
-import { stopListening } from '../renderer/listenEvent';
-import { register } from '../ClickerSDk/register';
+import {SerialPort} from 'serialport';
+// import { listenClickerEvent } from '../renderer/listenEvent';
+// import { stopListening } from '../renderer/listenEvent';
+// import { register } from '../renderer/ClickerSDk/register';
 
 class AppUpdater {
   constructor() {
@@ -28,6 +28,7 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+var classKeySerialPort;
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -84,6 +85,7 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
         contextIsolation: true,
       sandbox: false,
+      nodeIntegration: true,
     },
   });
 
@@ -118,42 +120,6 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
-/**
- * Add event listeners...
- */
-ipcMain.handle('get-port-list', async () => {
-  try {
-    const ports: any = await portList();
-    const finalPort = ports.filter((port: any) => port.vendorId);
-    console.log(finalPort, "finalPort");
-    return finalPort;
-  } catch (error) {
-    console.log(error, 'ERROR');
-    return [];
-  }
-});
-
-ipcMain.handle('start-listening', (event, count) => {
-  try{
-    listenClickerEvent((eventNum: any, deviceID: any) => {
-      console.log(count);
-      console.log(deviceID);
-      console.log(eventNum);
-      event.sender.send('clicker-event', { count, eventNum, deviceID });
-    });
-  }catch(e){
-    console.log(e);
-  }
-});
-
-ipcMain.handle('stop-listening', () => {
-  stopListening();
-});
-
-ipcMain.handle('register', async (classNum, studentNum, clickerNum) => {
-  return await register(classNum, studentNum, clickerNum);
-});
-
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
@@ -165,6 +131,74 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(() => {
+    ipcMain.on('serialport', (event, data) => {
+      switch (data.type) {
+          case 'open':
+              SerialPort.list().then((ports) => {
+                      console.log('ports:', ports)
+                      for (var port of ports) {
+                          console.log('port vendorId: ' + port.vendorId)
+                          if (port.vendorId === '1915' && ((port.productId === '521a' || port.productId === '521A') || (port.productId === 'c00a' || port.productId === 'C00A'))) {
+                              classKeySerialPort = new SerialPort({
+                                  path: port.path,
+                                  baudRate: 115200,
+                                  dataBits: 8,
+                                  parity: 'none'
+                              });
+  
+                              classKeySerialPort
+                                  .on('open', () => {
+                                      event.sender.send('serialport', { type: 'opened' });
+                                  })
+                                  .on('close', () => {
+                                      console.log('close')
+                                      event.sender.send('serialport', { type: 'closed' });
+                                  })
+                                  .on('error', (error) => {
+                                      console.log('error')
+                                      console.error(error);
+                                      event.sender.send('serialport', { type: 'error', payload: { message: error.message } });
+                                  })
+                                  .on('data', (data) => {
+                                      console.log("data received")
+                                      console.log(data)
+                                      console.log("data received finished")
+                                      event.sender.send('serialport', { type: 'data', payload: data });
+                                  });
+  
+                              if (process.argv.includes('--serialport-mock')) {
+                                  global.classKeySerialPort = classKeySerialPort;
+                              }
+                              return;
+                          }
+                      }
+                      console.log('device not found')
+                      event.sender.send('serialport', { type: 'error', payload: { message: 'device not found' } });
+                  
+              }).catch((error) => {
+                event.sender.send('serialport', { type: 'error', payload: { message: error.message } });
+              });;
+              break;
+          case 'close':
+              if (classKeySerialPort && classKeySerialPort.isOpen) {
+                  classKeySerialPort.close();
+              }
+              break;
+          case 'write':
+              if (classKeySerialPort && classKeySerialPort.isOpen) {
+                  var writeBuffer = Buffer.from(data.payload);
+                  classKeySerialPort.write(writeBuffer, function (err, result) {
+                      if (err) {
+                          console.log('Error while sending message : ' + err);
+                      }
+                      if (result) {
+                          console.log('Response received after sending message : ' + result);
+                      }
+                  })
+              }
+              break;
+      }
+  });
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

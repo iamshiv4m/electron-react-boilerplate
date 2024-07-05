@@ -1,15 +1,29 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
+import RemoteControlService from './remoteControl';
 
 contextBridge.exposeInMainWorld('electron', {
-  getPortList: () => ipcRenderer.invoke('get-port-list'),
-  startListening: (count: number) => {
-    console.log('ipc event count', ipcRenderer, count)
-    ipcRenderer.invoke('start-listening', count)
+  ipcRenderer: {
+    send(channel: string, args: unknown[]) {
+      ipcRenderer.send(channel, args);
+    },
+    on(channel: string, func: (...args: unknown[]) => void) {
+      const subscription = (_event: IpcRendererEvent, ...args: unknown[]) =>
+        func(...args);
+      ipcRenderer.on(channel, subscription);
+
+      return () => ipcRenderer.removeListener(channel, subscription);
+    },
+    once(channel: string, func: (...args: unknown[]) => void) {
+      ipcRenderer.once(channel, (_event, ...args) => func(...args));
+    },
   },
-  stopListening: () => ipcRenderer.send('stop-listening'),
-  onClickerEvent: (callback: (data: any) => void) =>
-    ipcRenderer.on('clicker-event', (_, data) => callback(data)),
-  register: (classNum: number, studentNum: number, clickerNum: number) =>
-    ipcRenderer.invoke('register', classNum, studentNum, clickerNum),
-  ipcRenderer: ipcRenderer,
+  remoteControl: {
+    open: () => RemoteControlService.open(),
+    close: () => RemoteControlService.close(),
+    subscribeEvents: (callback: (data: any) => void) => RemoteControlService.subscribeEvents(callback),
+    unsubscribeEvents: () => RemoteControlService.unsubscribeEvents(),
+    startRegister: (classNumber: number, number: number, registrationKey: number[]) => 
+      RemoteControlService.startRegister(classNumber, number, registrationKey),
+    finishRegister: () => RemoteControlService.finishRegister(),
+  },
 });

@@ -1,26 +1,28 @@
-import { ipcRenderer } from "electron";
-import { Subject, Subscription } from "rxjs";
+import { ipcRenderer } from 'electron';
+import { Subject, Subscription } from 'rxjs';
 
 class RemoteControlService {
   private events: Subject<any>;
-  private _receivedBuffer: Buffer;
+  private _receivedBuffer: Buffer | undefined;
   private isListening: boolean;
   private subscription: Subscription | null;
+  private removeListener: (() => void) | null;
 
   constructor() {
     this.events = new Subject();
-    this._receivedBuffer = Buffer.alloc(0);
+    this._receivedBuffer = undefined;
     this.isListening = false;
     this.subscription = null;
+    this.removeListener = null;
   }
 
   open(): boolean {
     if (!checkElectronValidity()) return false;
     if (!this.isListening) {
       this.isListening = true;
-      console.log("open", ipcRenderer);
-      ipcRenderer.on("serialport", (event, data) => {
-        onSerialPortData(this.events, this._receivedBuffer, event, data);
+      console.log("remore control ipcRenderer", ipcRenderer);
+      ipcRenderer.on("serialport", (event: any, data: any) => {
+        onSerialPortData(this.events, this._receivedBuffer!, event, data);
       });
     }
     ipcRenderer.send("serialport", { type: "open" });
@@ -49,7 +51,7 @@ class RemoteControlService {
     }
   }
 
-  startRegister(classNumber: number, number: number, registrationKey: number): boolean {
+  startRegister(classNumber: number, number: number, registrationKey: number[]): boolean {
     console.log(classNumber, number, registrationKey, "HERREEE");
     if (!checkElectronValidity()) return false;
     ipcRenderer.send("serialport", {
@@ -61,7 +63,7 @@ class RemoteControlService {
         number,
         0x10,
         0x01,
-        registrationKey,
+        ...registrationKey,
         0x1e,
         0x03,
         0x0d,
@@ -93,7 +95,7 @@ function checkElectronValidity(): boolean {
 }
 
 function onSerialPortData(events: Subject<any>, receivedBuffer: Buffer, _event: any, data: any): void {
-  let eventsSubject = events;
+  const eventsSubject = events;
 
   switch (data.type) {
     case "opened":
@@ -115,7 +117,7 @@ function onSerialPortData(events: Subject<any>, receivedBuffer: Buffer, _event: 
         const payloadLength = receivedBuffer[1] + 2;
 
         if (payloadLength === 15) {
-          const addressTokens: string[] = [];
+          const addressTokens = [];
           for (let index = 7; index < 13; index++) {
             const token = receivedBuffer[index].toString(16);
             addressTokens.push(token.length === 2 ? token : "0" + token);
@@ -201,3 +203,4 @@ function readyForRead(receivedBuffer: Buffer): boolean {
 }
 
 export default new RemoteControlService();
+
